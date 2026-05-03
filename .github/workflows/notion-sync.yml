@@ -1,0 +1,29 @@
+name: Notion 笔记同步
+
+on:
+  schedule:
+    # 每 30 分钟同步一次
+    - cron: '*/30 * * * *'
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 从 Notion 导出笔记
+        uses: yucchiy/notion-to-markdown@v0.3.2
+        with:
+          notion_auth_token: ${{ secrets.NOTION_TOKEN }}
+          notion_database_id: ${{ secrets.NOTION_DATABASE_ID }}
+          output_directory_path_template: 'notion-notes/{{title}}'
+
+      - name: 提交并推送变更
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add notion-notes/
+          git diff --staged --quiet || git commit -m "同步 Notion 笔记 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
